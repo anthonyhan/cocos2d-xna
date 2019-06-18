@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -53,6 +54,7 @@ namespace Cocos2D
     {
         public static SurfaceFormat DefaultAlphaPixelFormat = SurfaceFormat.Color;
         public static bool OptimizeForPremultipliedAlpha = true;
+        public static bool PreserveSourceSurfaceFormat = true;
 
         private CCTextureCacheInfo m_CacheInfo;
         private Texture2D m_Texture2D;
@@ -66,6 +68,8 @@ namespace Cocos2D
 
         private bool m_bManaged;
         private bool m_bAntialiased;
+
+        public Action OnReInit;
 
         public CCTexture2D()
         {
@@ -84,7 +88,7 @@ namespace Cocos2D
         {
             get
             {
-                if (m_Texture2D != null && m_Texture2D.IsDisposed)
+                if (m_Texture2D == null || m_Texture2D.IsDisposed)
                 {
                     Reinit();
                 }
@@ -211,7 +215,7 @@ namespace Cocos2D
             m_samplerState.AddressW = saveState.AddressW;
         }
 
-        public uint BitsPerPixelForFormat
+        public uint BytesPerPixelForFormat
         {
             //from MG: Microsoft.Xna.Framework.Graphics.GraphicsExtensions
             get
@@ -280,9 +284,28 @@ namespace Cocos2D
             m_Texture2D = null;
         }
 
+        public virtual int TotalBytes
+        {
+            get
+            {
+                int size = m_uPixelsHigh * m_uPixelsWide;
+                if (IsTextureDefined)
+                {
+#if !XNA
+                    size *= XNATexture.Format.GetSize();
+#else
+                    size *= (int)BytesPerPixelForFormat;
+#endif
+                }
+                return (size);
+            }
+        }
+
         public override string ToString()
         {
-            return String.Format("<CCTexture2D | Dimensions = {0} x {1})>", m_uPixelsWide, m_uPixelsHigh);
+            int size = TotalBytes;
+            size = size >> 10; // KB
+            return String.Format("[CCTexture2D | Dimensions = {0} x {1} | {2} | {3} | {4} KB)]", m_uPixelsWide, m_uPixelsHigh, m_bManaged ? "Managed" : "Native", IsTextureDefined ? "Valid" : "InValid", size);
         }
 
         public void SaveAsJpeg(Stream stream, int width, int height)
@@ -506,49 +529,50 @@ namespace Cocos2D
 
                 string[] lineList = text.Split('\n');
 
-                float spaceWidth = font.MeasureString(" ").X * scale;
-
+                StringBuilder next = new StringBuilder();
+                string last = null;
                 for (int j = 0; j < lineList.Length; ++j)
                 {
                     string[] wordList = lineList[j].Split(' ');
-
-                    float lineWidth = 0;
-                    bool firstWord = true;
-
-                    for (int i = 0; i < wordList.Length; ++i)
+                    for (int i = 0; i < wordList.Length; )
                     {
-                        float wordWidth = font.MeasureString(wordList[i]).X * scale;
-
-                        if ((lineWidth + wordWidth) > dimensions.Width)
+                        // Run through the list of words to create a sentence that fits in the dimensions.Width space
+                        while (i < wordList.Length)
                         {
-                            lineWidth = wordWidth;
-
-                            if (nextText.Length > 0)
+                            if ((font.MeasureString(next.ToString()).X * scale) > dimensions.Width)
                             {
-                                firstWord = true;
-                                textList.Add(nextText.ToString());
-                                nextText.Length = 0;
+                                i--;
+                                break;
                             }
-                            else
+                            last = next.ToString();
+                            if (next.Length > 0)
                             {
-                                lineWidth += wordWidth;
-                                firstWord = false;
-                                textList.Add(wordList[i]);
-                                continue;
+                                next.Append(' ');
+                            }
+                            next.Append(wordList[i]);
+                            i++;
+                        }
+                        if (i == wordList.Length || i == -1) // -1 means the default width was too small for the string.
+                        {
+                            string nstr = next.ToString();
+                            if ((font.MeasureString(nstr).X * scale) > dimensions.Width)
+                            {
+                                // Last line could have bleed into the margin
+                                if(last != null && last.Length > 0)
+                                    textList.Add(last); // Single word label has a null last which can cause problems
+                                textList.Add(wordList[wordList.Length - 1]); // last word bleeds
+                            }
+                            else if(nstr.Length > 0)
+                            {
+                                textList.Add(nstr);
                             }
                         }
-                        else
+                        else if(last.Length > 0)
                         {
-                            lineWidth += wordWidth;
+                            textList.Add(last);
                         }
-                        if (!firstWord)
-                        {
-                            nextText.Append(' ');
-                            lineWidth += spaceWidth;
-                        }
-
-                        nextText.Append(wordList[i]);
-                        firstWord = false;
+                        last = null;
+                        next.Length = 0;
                     }
 
                     textList.Add(nextText.ToString());
@@ -557,6 +581,11 @@ namespace Cocos2D
 #else
                     nextText.Clear();
 #endif
+                }
+
+                if (textList.Count == 0 && text.Length > 0)
+                {
+                    textList.Add(text);
                 }
 
                 if (dimensions.Height == 0)
@@ -570,7 +599,15 @@ namespace Cocos2D
                     DefaultAlphaPixelFormat, RenderTargetUsage.DiscardContents
                     );
 
-                CCDrawManager.SetRenderTarget(renderTarget);
+                try
+                {
+                    CCDrawManager.SetRenderTarget(renderTarget);
+                }
+                catch (Exception)
+                {
+                    CCTextureCache.SharedTextureCache.RemoveUnusedTextures();
+                    CCDrawManager.SetRenderTarget(renderTarget);
+                }
                 CCDrawManager.Clear(Color.Transparent);
 
                 SpriteBatch sb = CCDrawManager.spriteBatch;
@@ -718,7 +755,7 @@ namespace Cocos2D
             if (texture != null)
             {
                 // usually xnb texture prepared as PremultipliedAlpha
-                return InitWithTexture(texture, DefaultAlphaPixelFormat, true, true);
+                return InitWithTexture(texture, PreserveSourceSurfaceFormat ? texture.Format : DefaultAlphaPixelFormat, true, true);
             }
 
             // try load raw image
@@ -729,7 +766,7 @@ namespace Cocos2D
                 if (texture != null)
                 {
                     // not premultiplied alpha
-                    return InitWithTexture(texture, DefaultAlphaPixelFormat, false, true);
+                    return InitWithTexture(texture, PreserveSourceSurfaceFormat ? texture.Format : DefaultAlphaPixelFormat, false, true);
                 }
             }
 
@@ -751,7 +788,9 @@ namespace Cocos2D
 
         public override void Reinit()
         {
-            CCLog.Log("reinit called on texture '{0}' {1}x{2}", Name, m_tContentSize.Width, m_tContentSize.Height);
+			CCLog.Log("reinit called on {1} '{0}' {2}", ToString(), 
+                m_CacheInfo.CacheType, 
+				(m_CacheInfo.CacheType == CCTextureCacheType.AssetFile || m_CacheInfo.CacheType == CCTextureCacheType.String) ? m_CacheInfo.Data : string.Empty);
 
             Texture2D textureToDispose = null;
             if (m_Texture2D != null && !m_Texture2D.IsDisposed && !m_bManaged)
@@ -763,53 +802,60 @@ namespace Cocos2D
             m_bManaged = false;
             m_Texture2D = null;
 
-            switch (m_CacheInfo.CacheType)
+            if (m_CacheInfo.CacheType != CCTextureCacheType.None)
             {
-                case CCTextureCacheType.None:
-                    return;
+                switch (m_CacheInfo.CacheType)
+                {
+                    case CCTextureCacheType.None:
+                        return;
 
-                case CCTextureCacheType.AssetFile:
-                    InitWithFile((string)m_CacheInfo.Data);
-                    break;
+                    case CCTextureCacheType.AssetFile:
+                        InitWithFile((string)m_CacheInfo.Data);
+                        break;
 
-                case CCTextureCacheType.Data:
-                    InitWithData((byte[])m_CacheInfo.Data, m_ePixelFormat, m_bHasMipmaps);
-                    break;
+                    case CCTextureCacheType.Data:
+                        InitWithData((byte[])m_CacheInfo.Data, m_ePixelFormat, m_bHasMipmaps);
+                        break;
 
-                case CCTextureCacheType.RawData:
+                    case CCTextureCacheType.RawData:
 #if NETFX_CORE
                     var methodInfo = typeof(CCTexture2D).GetType().GetTypeInfo().GetDeclaredMethod("InitWithRawData");
 #else
-                    var methodInfo = typeof(CCTexture2D).GetMethod("InitWithRawData", BindingFlags.Public | BindingFlags.Instance);
+                        var methodInfo = typeof(CCTexture2D).GetMethods(BindingFlags.Public | BindingFlags.Instance).First(m => m.Name == "InitWithRawData" && m.IsGenericMethod && m.GetParameters().Length == 7);
 #endif
-                    var genericMethod = methodInfo.MakeGenericMethod(m_CacheInfo.Data.GetType());
-                    genericMethod.Invoke(this, new object[]
+                        var genericMethod = methodInfo.MakeGenericMethod(m_CacheInfo.Data.GetType().GetElementType());
+                        genericMethod.Invoke(this, new object[]
                         {
-                            Convert.ChangeType(m_CacheInfo.Data, m_CacheInfo.Data.GetType(),System.Globalization.CultureInfo.InvariantCulture),
+                            m_CacheInfo.Data,
                             m_ePixelFormat, m_uPixelsWide, m_uPixelsHigh, 
                             m_bHasPremultipliedAlpha, m_bHasMipmaps, m_tContentSize
                         });
 
-//                    InitWithRawData((byte[])m_CacheInfo.Data, m_ePixelFormat, m_uPixelsWide, m_uPixelsHigh,
-//                                    m_bHasPremultipliedAlpha, m_bHasMipmaps, m_tContentSize);
-                    break;
+                        //                    InitWithRawData((byte[])m_CacheInfo.Data, m_ePixelFormat, m_uPixelsWide, m_uPixelsHigh,
+                        //                                    m_bHasPremultipliedAlpha, m_bHasMipmaps, m_tContentSize);
+                        break;
 
-                case CCTextureCacheType.String:
-                    var si = (CCStringCache)m_CacheInfo.Data;
-                    InitWithString(si.Text, si.Dimensions, si.HAlignment, si.VAlignment, si.FontName, si.FontSize);
-                    if (m_bHasMipmaps)
-                    {
-                        m_bHasMipmaps = false;
-                        GenerateMipmap();
-                    }
-                    break;
+                    case CCTextureCacheType.String:
+                        var si = (CCStringCache)m_CacheInfo.Data;
+                        InitWithString(si.Text, si.Dimensions, si.HAlignment, si.VAlignment, si.FontName, si.FontSize);
+                        if (m_bHasMipmaps)
+                        {
+                            m_bHasMipmaps = false;
+                            GenerateMipmap();
+                        }
+                        break;
 
-                default:
-                    throw new ArgumentOutOfRangeException();
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
             }
             if (textureToDispose != null && !textureToDispose.IsDisposed)
             {
                 textureToDispose.Dispose();
+            }
+            if (OnReInit != null)
+            {
+                OnReInit();
             }
         }
 
@@ -858,7 +904,8 @@ namespace Cocos2D
                 );
 
             CCDrawManager.SetRenderTarget(renderTarget);
-            CCDrawManager.spriteBatch.Begin();
+            CCDrawManager.Clear(Color.Transparent);
+            CCDrawManager.spriteBatch.Begin(SpriteSortMode.Immediate, HasPremultipliedAlpha ? BlendState.AlphaBlend : BlendState.NonPremultiplied);
             CCDrawManager.spriteBatch.Draw(texture, new Vector2(0, 0), Color.White);
             CCDrawManager.spriteBatch.End();
             CCDrawManager.SetRenderTarget((CCTexture2D)null);
