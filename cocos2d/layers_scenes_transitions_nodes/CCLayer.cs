@@ -131,7 +131,8 @@ namespace Cocos2D
                     CCNode child = arrayData[i];
                     if (child.m_nZOrder < 0)
                     {
-                        child.Visit();
+                        if(child.Visible)
+                            child.Visit();
                     }
                     else
                     {
