@@ -4,6 +4,16 @@ Cocos2D-XNA is the premier 2D game development engine based upon the wildly popu
 
 Cocos2D-XNA : Reach To Infinity!
 
+
+
+-----------------------
+### INSTALL MONOGAME SDK BEFORE BUILDING THIS FORK!
+
+---------------------------------------------------------------
+
+ORIGINAL README
+---------------------------------------------------------------
+
 License
 -------
 
