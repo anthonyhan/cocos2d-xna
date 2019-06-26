@@ -27,7 +27,7 @@ using System.Globalization;
 #if MACOS
 using MonoMac.OpenGL;
 #elif WINDOWSGL || LINUX
-using OpenTK.Graphics.OpenGL;
+//using OpenTK.Graphics.OpenGL;
 #else
 using OpenTK.Graphics.ES20;
 using BeginMode = OpenTK.Graphics.ES20.All;
@@ -49,7 +49,7 @@ namespace Cocos2D
 {
     public class CCUtils
     {
-
+        /*
         #if !WINDOWS_PHONE && !XBOX && !PSM
         #if OPENGL
         private static List<string> _GLExtensions = null;
@@ -101,7 +101,7 @@ namespace Cocos2D
         }
         #endif
         #endif
-        
+        */
         /// <summary>
         /// Returns the Cardinal Spline position for a given set of control points, tension and time
         /// </summary>
