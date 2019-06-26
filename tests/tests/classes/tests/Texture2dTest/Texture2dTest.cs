@@ -12,7 +12,7 @@ using Microsoft.Xna.Framework.Graphics;
 #if MACOS
 using MonoMac.OpenGL;
 #elif WINDOWS || LINUX
-using OpenTK.Graphics.OpenGL;
+//using OpenTK.Graphics.OpenGL;
 #elif GLES
 using OpenTK.Graphics.ES20;
 #endif
