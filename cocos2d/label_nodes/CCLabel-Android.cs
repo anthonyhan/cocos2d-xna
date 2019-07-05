@@ -36,7 +36,7 @@ namespace Cocos2D
             _paint.TextSize = fontSize;
 
             var ext = System.IO.Path.GetExtension(fontName);
-            if (!String.IsNullOrEmpty(ext) && ext.ToLower() == ".ttf")
+            if (!String.IsNullOrEmpty(ext) && (ext.ToLower() == ".ttf"|| ext.ToLower() == ".otf"))
             {
                 var path = System.IO.Path.Combine(CCApplication.SharedApplication.Game.Content.RootDirectory, fontName);
                 var activity = Game.Activity;

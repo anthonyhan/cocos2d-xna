@@ -128,7 +128,7 @@ namespace Cocos2D
 
                 _currentFont = _defaultFont;
 
-                if (!String.IsNullOrEmpty(ext) && ext.ToLower() == ".ttf")
+                if (!String.IsNullOrEmpty(ext) && (ext.ToLower() == ".ttf" || ext.ToLower() == ".otf"))
                 {
                     //var appPath = AppDomain.CurrentDomain.BaseDirectory;
                     //var contentPath = Path.Combine(appPath, CCApplication.SharedApplication.Content.RootDirectory);
