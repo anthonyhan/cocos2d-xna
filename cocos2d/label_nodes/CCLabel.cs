@@ -64,6 +64,7 @@ namespace Cocos2D
 
             m_pTexture = new CCTexture2D();
             m_pData = new int[width * height];
+            m_pTexture.InitWithRawData(m_pData, SurfaceFormat.Color, width, height, true);
 
             m_pNodes.Clear();
             m_pNodes.Add(new ivec3() { x = 1, y = 1, z = m_nWidth - 2 });
