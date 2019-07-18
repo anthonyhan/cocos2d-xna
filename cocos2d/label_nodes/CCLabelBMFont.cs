@@ -594,7 +594,7 @@ namespace Cocos2D
                 m_tDimensions.Height > 0 ? m_tDimensions.Height : tmpSize.Height
                 );
 
-            ContentSize = tmpSize.PixelsToPoints();
+            ContentSize = tmpSize;
         }
 
         public virtual void SetString(string newString, bool needUpdateLabel)
@@ -789,6 +789,14 @@ namespace Cocos2D
             }
 
             base.Visit();
+
+            //CCDrawingPrimitives.Begin();
+            //for(int i=0; i<m_pChildren.Count; ++i)
+            //{
+            //    var sp = m_pChildren[i];
+            //    CCDrawingPrimitives.DrawRect(sp.WorldBoundingBox, CCColor4B.White);
+            //}
+            //CCDrawingPrimitives.End();
         }
 
         private void BreakLines()
@@ -802,21 +810,21 @@ namespace Cocos2D
             int numchars = 0;
             float linewidth = 0f;
 
-            while (pos < in_string.Length && in_string.ElementAt(pos) > 0)
+            while (pos < in_string.Length && in_string[pos] > 0)
             {
-                var char_sprite = GetChildByTag(pos);
-
                 float charw = 0f;
-                if (char_sprite != null)
-                    charw = char_sprite.ContentSize.Width * m_fScaleX;
+
+                CCBMFontConfiguration.CCBMFontDef fontDef;
+                if (m_pConfiguration.m_pFontDefDictionary.TryGetValue(in_string[pos], out fontDef))
+                {
+                    charw = fontDef.xAdvance/CCDirector.SharedDirector.ContentScaleFactor;
+                }
 
                 linewidth += charw;
                 numchars++;
-
                 if (linewidth > m_tDimensions.Width)
                 {
-                    int i;
-                    for (i = 0; i < numchars - 1; i++)
+                    for (int i = 0; i < numchars - 1; i++)
                     {
                         if (Char.IsWhiteSpace(in_string[pos]))
                             break;
@@ -825,16 +833,11 @@ namespace Cocos2D
                             CanNewLineBefore(in_string[pos]) && CanNewLineAfter(in_string[pos - 1]))
                             break;
 
-                        out_string.Remove(--pos, 1);
+                        out_string.Remove(out_string.Length-1, 1);
+                        pos--;
                     }
 
-                    //if (i == numchars - 1)
-                    //{
-                    //    linewidth = 0.0f;
-                    //    break;
-                    //}
-
-                    out_string.Append('\n');
+                    out_string.AppendLine();
 
                     while (Char.IsWhiteSpace(in_string[pos]))
                         pos++;
