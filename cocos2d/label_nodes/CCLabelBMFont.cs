@@ -263,28 +263,28 @@ namespace Cocos2D
 
         public virtual void UpdateDisplayedColor(CCColor3B parentColor)
         {
-            m_tDisplayedColor.R = (byte) (m_tRealColor.R * parentColor.R / 255.0f);
-            m_tDisplayedColor.G = (byte) (m_tRealColor.G * parentColor.G / 255.0f);
-            m_tDisplayedColor.B = (byte) (m_tRealColor.B * parentColor.B / 255.0f);
+            m_tDisplayedColor.R = (byte)(m_tRealColor.R * parentColor.R / 255.0f);
+            m_tDisplayedColor.G = (byte)(m_tRealColor.G * parentColor.G / 255.0f);
+            m_tDisplayedColor.B = (byte)(m_tRealColor.B * parentColor.B / 255.0f);
 
             if (m_pChildren != null)
             {
                 for (int i = 0, count = m_pChildren.count; i < count; i++)
                 {
-                    ((CCSprite) m_pChildren.Elements[i]).UpdateDisplayedColor(m_tDisplayedColor);
+                    ((CCSprite)m_pChildren.Elements[i]).UpdateDisplayedColor(m_tDisplayedColor);
                 }
             }
         }
 
         public virtual void UpdateDisplayedOpacity(byte parentOpacity)
         {
-            m_cDisplayedOpacity = (byte) (m_cRealOpacity * parentOpacity / 255.0f);
+            m_cDisplayedOpacity = (byte)(m_cRealOpacity * parentOpacity / 255.0f);
 
             if (m_pChildren != null)
             {
                 for (int i = 0, count = m_pChildren.count; i < count; i++)
                 {
-                    ((CCSprite) m_pChildren.Elements[i]).UpdateDisplayedOpacity(m_cDisplayedOpacity);
+                    ((CCSprite)m_pChildren.Elements[i]).UpdateDisplayedOpacity(m_cDisplayedOpacity);
                 }
             }
         }
@@ -441,7 +441,7 @@ namespace Cocos2D
         {
             int nextFontPositionX = 0;
             int nextFontPositionY = 0;
-            char prev = (char) 255;
+            char prev = (char)255;
             int kerningAmount = 0;
 
             CCSize tmpSize = CCSize.Zero;
@@ -494,7 +494,7 @@ namespace Cocos2D
                 if (charSet.IndexOf(c) == -1)
                 {
                     CCLog.Log("Cocos2D.CCLabelBMFont: Attempted to use character not defined in this bitmap: {0}",
-                              (int) c);
+                              (int)c);
                     continue;
                 }
 
@@ -503,7 +503,7 @@ namespace Cocos2D
                 // unichar is a short, and an int is needed on HASH_FIND_INT
                 if (!m_pConfiguration.m_pFontDefDictionary.TryGetValue(c, out fontDef))
                 {
-                    CCLog.Log("cocos2d::CCLabelBMFont: characer not found {0}", (int) c);
+                    CCLog.Log("cocos2d::CCLabelBMFont: characer not found {0}", (int)c);
                     continue;
                 }
 
@@ -516,7 +516,7 @@ namespace Cocos2D
                 CCSprite fontChar;
 
                 //bool hasSprite = true;
-                fontChar = (CCSprite) (GetChildByTag(i));
+                fontChar = (CCSprite)(GetChildByTag(i));
                 if (fontChar != null)
                 {
                     // Reusing previous Sprite
@@ -557,8 +557,8 @@ namespace Cocos2D
                 int yOffset = m_pConfiguration.m_nCommonHeight - fontDef.yOffset;
                 var fontPos =
                     new CCPoint(
-                        (float) nextFontPositionX + fontDef.xOffset + fontDef.rect.Size.Width * 0.5f + kerningAmount,
-                        (float) nextFontPositionY + yOffset - rect.Size.Height * 0.5f * CCMacros.CCContentScaleFactor());
+                        (float)nextFontPositionX + fontDef.xOffset + fontDef.rect.Size.Width * 0.5f + kerningAmount,
+                        (float)nextFontPositionY + yOffset - rect.Size.Height * 0.5f * CCMacros.CCContentScaleFactor());
                 fontChar.Position = fontPos.PixelsToPoints();
 
                 // update kerning
@@ -638,193 +638,11 @@ namespace Cocos2D
             {
                 return;
             }
+
+            // Step 1: Make multiline
             if (m_tDimensions.Width > 0)
             {
-                // Step 1: Make multiline
-                string str_whole = m_sString;
-                int stringLength = str_whole.Length;
-                var multiline_string = new StringBuilder(stringLength);
-                var last_word = new StringBuilder(stringLength);
-
-                int line = 1, i = 0;
-                bool start_line = false, start_word = false;
-                float startOfLine = -1, startOfWord = -1;
-                int skip = 0;
-
-                CCRawList<CCNode> children = m_pChildren;
-                for (int j = 0; j < children.count; j++)
-                {
-                    CCSprite characterSprite;
-                    int justSkipped = 0;
-
-                    while ((characterSprite = (CCSprite) GetChildByTag(j + skip + justSkipped)) == null)
-                    {
-                        justSkipped++;
-                    }
-
-                    skip += justSkipped;
-
-                    if (!characterSprite.Visible)
-                    {
-                        continue;
-                    }
-
-                    if (i >= stringLength)
-                    {
-                        break;
-                    }
-
-                    char character = str_whole[i];
-
-                    if (!start_word)
-                    {
-                        startOfWord = GetLetterPosXLeft(characterSprite);
-                        start_word = true;
-                    }
-                    if (!start_line)
-                    {
-                        startOfLine = startOfWord;
-                        start_line = true;
-                    }
-
-                    // Newline.
-                    if (character == '\n')
-                    {
-                        int len = last_word.Length;
-                        while (len > 0 && Char.IsWhiteSpace(last_word[len - 1]))
-                        {
-                            len--;
-                            last_word.Remove(len, 1);
-                        }
-
-                        multiline_string.Append(last_word);
-                        multiline_string.Append('\n');
-
-#if XBOX || XBOX360
-                        last_word.Length = 0;
-#else
-                        last_word.Clear();
-#endif
-
-                        start_word = false;
-                        start_line = false;
-                        startOfWord = -1;
-                        startOfLine = -1;
-                        i += justSkipped;
-                        line++;
-
-                        if (i >= stringLength)
-                            break;
-
-                        character = str_whole[i];
-
-                        if (startOfWord == 0)
-                        {
-                            startOfWord = GetLetterPosXLeft(characterSprite);
-                            start_word = true;
-                        }
-                        if (startOfLine == 0)
-                        {
-                            startOfLine = startOfWord;
-                            start_line = true;
-                        }
-                    }
-
-                    // Whitespace.
-                    if (Char.IsWhiteSpace(character))
-                    {
-                        last_word.Append(character);
-                        multiline_string.Append(last_word);
-#if XBOX || XBOX360
-                        last_word.Length = 0;
-#else
-                        last_word.Clear();
-#endif
-                        start_word = false;
-                        startOfWord = -1;
-                        i++;
-                        continue;
-                    }
-
-                    // Out of bounds.
-                    if (GetLetterPosXRight(characterSprite) - startOfLine > m_tDimensions.Width)
-                    {
-                        if (!m_bLineBreakWithoutSpaces)
-                        {
-                            last_word.Append(character);
-
-                            int len = multiline_string.Length;
-                            while (len > 0 && Char.IsWhiteSpace(multiline_string[len - 1]))
-                            {
-                                len--;
-                                multiline_string.Remove(len, 1);
-                            }
-
-                            if (multiline_string.Length > 0)
-                            {
-                                multiline_string.Append('\n');
-                            }
-
-                            line++;
-                            start_line = false;
-                            startOfLine = -1;
-                            i++;
-                        }
-                        else
-                        {
-                            int len = last_word.Length;
-                            while (len > 0 && Char.IsWhiteSpace(last_word[len - 1]))
-                            {
-                                len--;
-                                last_word.Remove(len, 1);
-                            }
-
-                            multiline_string.Append(last_word);
-                            multiline_string.Append('\n');
-
-#if XBOX || XBOX360
-                            last_word.Length = 0;
-#else
-                            last_word.Clear();
-#endif
-
-                            start_word = false;
-                            start_line = false;
-                            startOfWord = -1;
-                            startOfLine = -1;
-                            line++;
-
-                            if (i >= stringLength)
-                                break;
-
-                            if (startOfWord == 0)
-                            {
-                                startOfWord = GetLetterPosXLeft(characterSprite);
-                                start_word = true;
-                            }
-                            if (startOfLine == 0)
-                            {
-                                startOfLine = startOfWord;
-                                start_line = true;
-                            }
-
-                            j--;
-                        }
-
-                        continue;
-                    }
-                    else
-                    {
-                        // Character is normal.
-                        last_word.Append(character);
-                        i++;
-                        continue;
-                    }
-                }
-
-                multiline_string.Append(last_word);
-
-                SetString(multiline_string.ToString(), false);
+                BreakLines();
             }
 
             // Step 2: Make alignment
@@ -850,7 +668,7 @@ namespace Cocos2D
                         int index = i + line_length - 1 + lineNumber;
                         if (index < 0) continue;
 
-                        var lastChar = (CCSprite) GetChildByTag(index);
+                        var lastChar = (CCSprite)GetChildByTag(index);
                         if (lastChar == null)
                             continue;
 
@@ -876,8 +694,9 @@ namespace Cocos2D
                                 index = i + j + lineNumber;
                                 if (index < 0) continue;
 
-                                var characterSprite = (CCSprite) GetChildByTag(index);
-                                characterSprite.Position = characterSprite.Position + new CCPoint(shift, 0.0f);
+                                var characterSprite = (CCSprite)GetChildByTag(index);
+                                if (characterSprite != null)
+                                    characterSprite.Position = characterSprite.Position + new CCPoint(shift, 0.0f);
                             }
                         }
 
@@ -918,7 +737,8 @@ namespace Cocos2D
                 for (int i = 0; i < str_len; i++)
                 {
                     var characterSprite = GetChildByTag(i);
-                    characterSprite.PositionY += yOffset;
+                    if (characterSprite != null)
+                        characterSprite.PositionY += yOffset;
                 }
             }
         }
@@ -969,6 +789,132 @@ namespace Cocos2D
             }
 
             base.Visit();
+        }
+
+        private void BreakLines()
+        {
+            var in_string = m_sString;
+            var out_string = new StringBuilder();
+
+            int pos = 0;
+
+            int numlines = 0;
+            int numchars = 0;
+            float linewidth = 0f;
+
+            while (pos < in_string.Length && in_string.ElementAt(pos) > 0)
+            {
+                var char_sprite = GetChildByTag(pos);
+
+                float charw = 0f;
+                if (char_sprite != null)
+                    charw = char_sprite.ContentSize.Width * m_fScaleX;
+
+                linewidth += charw;
+                numchars++;
+
+                if (linewidth > m_tDimensions.Width)
+                {
+                    int i;
+                    for (i = 0; i < numchars - 1; i++)
+                    {
+                        if (Char.IsWhiteSpace(in_string[pos]))
+                            break;
+
+                        if (!IsLetter(in_string[pos]) || !IsLetter(in_string[pos - 1]) &&
+                            CanNewLineBefore(in_string[pos]) && CanNewLineAfter(in_string[pos - 1]))
+                            break;
+
+                        out_string.Remove(--pos, 1);
+                    }
+
+                    //if (i == numchars - 1)
+                    //{
+                    //    linewidth = 0.0f;
+                    //    break;
+                    //}
+
+                    out_string.Append('\n');
+
+                    while (Char.IsWhiteSpace(in_string[pos]))
+                        pos++;
+
+                    linewidth = 0.0f;
+                    numchars = 0;
+                    numlines++;
+                }
+                else
+                {
+                    if (in_string[pos] == '\n')
+                    {
+                        out_string.Append(in_string[pos++]);
+
+                        while (Char.IsWhiteSpace(in_string[pos]))
+                            pos++;
+
+                        linewidth = 0f;
+                        numchars = 0;
+                        numlines++;
+                    }
+                    else
+                    {
+                        out_string.Append(in_string[pos++]);
+                    }
+                }
+
+                if (linewidth > 0f)
+                    linewidth += 0;
+            }
+
+            SetString(out_string.ToString(), false);
+        }
+
+        private static readonly ushort[] s_notatstart =
+{
+	//L'!', L'%', L')', L',', L'.', L':', L';', L'>', L'?', L']', L'_',
+	0x0021, 0x0025, 0x0029,0x002c,0x002e,0x003a,0x003b,0x003e,0x003f,0x005d,0x0f,
+	//"£¥", "£©",   "¡¢",   "¡±",    "£º",   "£»",   "£¡",   "£¬",
+	0xff05, 0xff09, 0x3001, 0x201d, 0xff1a, 0xff1b, 0xff01, 0xff0c,
+	//"¡£", "£¿",   "¡¤",    "££",   "£«",   "£­",   "¡¯",    "¡­"
+	0x3002, 0xff1f, 0x00b7, 0xff03, 0xff0b, 0xff0d, 0x2019, 0x2026
+};
+        private static readonly ushort[] s_notatend =
+        {
+	//L'$', L'(', L'<', L'[', L'_',
+	0x0024,0x0028,0x003c,0x005b,0x005f,
+	//"£¨", "¡°",    "¡¤",    "££",   "£«",   "£­",   "¡®"
+	0xff08, 0x201c, 0x00b7, 0xff03, 0xff0b, 0xff0d, 0x2018
+};
+        private static bool CanNewLineBefore(char c)
+        {
+            for (int i = 0; i < s_notatstart.Length; i++)
+            {
+                if (c == s_notatstart[i])
+                    return false;
+            }
+            return true;
+        }
+        private static bool CanNewLineAfter(char c)
+        {
+            for (int i = 0; i < s_notatend.Length; i++)
+            {
+                if (c == s_notatend[i])
+                    return false;
+            }
+            return true;
+        }
+        static bool IsLetter(char c)
+        {
+            if (c < 0x0080)
+                return true;
+
+            //Latin-1 Ext 0x00a1 - 0x00ff
+            //Latin Ext-A  0x0100 - 0x017f
+            //Latin Ext-B  0x0180 - 0x024f
+            if (c >= 0x00a1 && c <= 0x024f)
+                return true;
+
+            return false;
         }
     }
 }
