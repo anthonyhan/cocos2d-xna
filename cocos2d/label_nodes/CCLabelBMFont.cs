@@ -789,14 +789,14 @@ namespace Cocos2D
 
             base.Visit();
 
-            CCDrawingPrimitives.Begin();
-            for(int i=0; i<m_pChildren.Count; ++i)
-            {
-                var sp = m_pChildren[i];
-                if(sp.Visible)
-                    CCDrawingPrimitives.DrawRect(sp.WorldBoundingBox, CCColor4B.White);
-            }
-            CCDrawingPrimitives.End();
+            //CCDrawingPrimitives.Begin();
+            //for(int i=0; i<m_pChildren.Count; ++i)
+            //{
+            //    var sp = m_pChildren[i];
+            //    if(sp.Visible)
+            //        CCDrawingPrimitives.DrawRect(sp.WorldBoundingBox, CCColor4B.White);
+            //}
+            //CCDrawingPrimitives.End();
         }
 
         private void BreakLines()
