@@ -956,5 +956,10 @@ namespace Cocos2D
 
             return lineNumber;
         }
+
+        public int GetTextHeight()
+        {
+            return m_pConfiguration != null ? m_pConfiguration.m_nCommonHeight * GetLineNumber() : 0;
+        }
     }
 }
