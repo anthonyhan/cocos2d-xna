@@ -474,8 +474,7 @@ namespace Cocos2D
             }
 
             totalHeight = m_pConfiguration.m_nCommonHeight * quantityOfLines;
-            nextFontPositionY = 0 -
-                                (m_pConfiguration.m_nCommonHeight - m_pConfiguration.m_nCommonHeight * quantityOfLines);
+            nextFontPositionY = m_pConfiguration.m_nCommonHeight * (quantityOfLines-1);
 
             CCBMFontConfiguration.CCBMFontDef fontDef = null;
             CCRect rect;
@@ -727,11 +726,11 @@ namespace Cocos2D
 
                 if (m_pVAlignment == CCVerticalTextAlignment.Center)
                 {
-                    yOffset = m_tDimensions.Height / 2f - (m_pConfiguration.m_nCommonHeight * lineNumber) / 2f;
+                    yOffset = m_tDimensions.Height / 2f - (m_pConfiguration.m_nCommonHeight/CCMacros.CCContentScaleFactor() * lineNumber) / 2f;
                 }
                 else
                 {
-                    yOffset = m_tDimensions.Height - m_pConfiguration.m_nCommonHeight * lineNumber;
+                    yOffset = m_tDimensions.Height - m_pConfiguration.m_nCommonHeight * lineNumber / CCMacros.CCContentScaleFactor();
                 }
 
                 for (int i = 0; i < str_len; i++)
@@ -790,19 +789,20 @@ namespace Cocos2D
 
             base.Visit();
 
-            //CCDrawingPrimitives.Begin();
-            //for(int i=0; i<m_pChildren.Count; ++i)
-            //{
-            //    var sp = m_pChildren[i];
-            //    CCDrawingPrimitives.DrawRect(sp.WorldBoundingBox, CCColor4B.White);
-            //}
-            //CCDrawingPrimitives.End();
+            CCDrawingPrimitives.Begin();
+            for(int i=0; i<m_pChildren.Count; ++i)
+            {
+                var sp = m_pChildren[i];
+                if(sp.Visible)
+                    CCDrawingPrimitives.DrawRect(sp.WorldBoundingBox, CCColor4B.White);
+            }
+            CCDrawingPrimitives.End();
         }
 
         private void BreakLines()
         {
             var in_string = m_sString;
-            var out_string = new StringBuilder();
+            var out_string = new StringBuilder(m_sString.Length);
 
             int pos = 0;
 
@@ -837,10 +837,16 @@ namespace Cocos2D
                         pos--;
                     }
 
-                    out_string.AppendLine();
+                    if(m_bLineBreakWithoutSpaces)
+                    {
+                        while (Char.IsWhiteSpace(out_string[out_string.Length - 1]))
+                            out_string.Remove(out_string.Length - 1, 1);
 
-                    while (Char.IsWhiteSpace(in_string[pos]))
-                        pos++;
+                        while (pos < in_string.Length && Char.IsWhiteSpace(in_string[pos]))
+                            pos++;
+                    }
+
+                    out_string.AppendLine();
 
                     linewidth = 0.0f;
                     numchars = 0;
@@ -852,8 +858,14 @@ namespace Cocos2D
                     {
                         out_string.Append(in_string[pos++]);
 
-                        while (Char.IsWhiteSpace(in_string[pos]))
-                            pos++;
+                        if(m_bLineBreakWithoutSpaces)
+                        {
+                            while (Char.IsWhiteSpace(out_string[out_string.Length - 1]))
+                                out_string.Remove(out_string.Length - 1, 1);
+
+                            while (pos < in_string.Length && Char.IsWhiteSpace(in_string[pos]))
+                                pos++;
+                        }
 
                         linewidth = 0f;
                         numchars = 0;
