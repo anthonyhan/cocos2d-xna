@@ -474,7 +474,7 @@ namespace Cocos2D
             }
 
             totalHeight = m_pConfiguration.m_nCommonHeight * quantityOfLines;
-            nextFontPositionY = m_pConfiguration.m_nCommonHeight * (quantityOfLines-1);
+            nextFontPositionY = m_pConfiguration.m_nCommonHeight * (quantityOfLines - 1);
 
             CCBMFontConfiguration.CCBMFontDef fontDef = null;
             CCRect rect;
@@ -641,7 +641,8 @@ namespace Cocos2D
             // Step 1: Make multiline
             if (m_tDimensions.Width > 0)
             {
-                BreakLines();
+                string multiline_str = BreakLines();
+                SetString(multiline_str, false);
             }
 
             // Step 2: Make alignment
@@ -726,7 +727,7 @@ namespace Cocos2D
 
                 if (m_pVAlignment == CCVerticalTextAlignment.Center)
                 {
-                    yOffset = m_tDimensions.Height / 2f - (m_pConfiguration.m_nCommonHeight/CCMacros.CCContentScaleFactor() * lineNumber) / 2f;
+                    yOffset = m_tDimensions.Height / 2f - (m_pConfiguration.m_nCommonHeight / CCMacros.CCContentScaleFactor() * lineNumber) / 2f;
                 }
                 else
                 {
@@ -799,7 +800,7 @@ namespace Cocos2D
             //CCDrawingPrimitives.End();
         }
 
-        private void BreakLines()
+        private string BreakLines()
         {
             var in_string = m_sString;
             var out_string = new StringBuilder(m_sString.Length);
@@ -817,7 +818,7 @@ namespace Cocos2D
                 CCBMFontConfiguration.CCBMFontDef fontDef;
                 if (m_pConfiguration.m_pFontDefDictionary.TryGetValue(in_string[pos], out fontDef))
                 {
-                    charw = fontDef.xAdvance/CCDirector.SharedDirector.ContentScaleFactor;
+                    charw = fontDef.xAdvance / CCDirector.SharedDirector.ContentScaleFactor;
                 }
 
                 linewidth += charw;
@@ -833,11 +834,11 @@ namespace Cocos2D
                             CanNewLineBefore(in_string[pos]) && CanNewLineAfter(in_string[pos - 1]))
                             break;
 
-                        out_string.Remove(out_string.Length-1, 1);
+                        out_string.Remove(out_string.Length - 1, 1);
                         pos--;
                     }
 
-                    if(m_bLineBreakWithoutSpaces)
+                    if (m_bLineBreakWithoutSpaces)
                     {
                         while (Char.IsWhiteSpace(out_string[out_string.Length - 1]))
                             out_string.Remove(out_string.Length - 1, 1);
@@ -858,7 +859,7 @@ namespace Cocos2D
                     {
                         out_string.Append(in_string[pos++]);
 
-                        if(m_bLineBreakWithoutSpaces)
+                        if (m_bLineBreakWithoutSpaces)
                         {
                             while (pos < in_string.Length && Char.IsWhiteSpace(in_string[pos]))
                                 pos++;
@@ -878,7 +879,7 @@ namespace Cocos2D
                     linewidth += 0;
             }
 
-            SetString(out_string.ToString(), false);
+            return out_string.ToString();
         }
 
         private static readonly ushort[] s_notatstart =
@@ -915,7 +916,7 @@ namespace Cocos2D
             }
             return true;
         }
-        static bool IsLetter(char c)
+        private static bool IsLetter(char c)
         {
             if (c < 0x0080)
                 return true;
@@ -927,6 +928,33 @@ namespace Cocos2D
                 return true;
 
             return false;
+        }
+
+        public int GetLineNumber()
+        {
+            int lineNumber = 0;
+
+            if (String.IsNullOrEmpty(m_sString))
+                return lineNumber;
+
+            string multiline_str = m_sString;
+
+            if (m_tDimensions.Width>0)
+            {
+                multiline_str = BreakLines();
+            }
+
+            lineNumber = 1;
+            int str_len = multiline_str.Length;
+            for (int ctr = 0; ctr < str_len; ++ctr)
+            {
+                if (multiline_str[ctr] == '\n')
+                {
+                    lineNumber++;
+                }
+            }
+
+            return lineNumber;
         }
     }
 }
