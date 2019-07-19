@@ -860,9 +860,6 @@ namespace Cocos2D
 
                         if(m_bLineBreakWithoutSpaces)
                         {
-                            while (Char.IsWhiteSpace(out_string[out_string.Length - 1]))
-                                out_string.Remove(out_string.Length - 1, 1);
-
                             while (pos < in_string.Length && Char.IsWhiteSpace(in_string[pos]))
                                 pos++;
                         }
