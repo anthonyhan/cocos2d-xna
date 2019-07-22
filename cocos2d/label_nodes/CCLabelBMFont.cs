@@ -465,7 +465,7 @@ namespace Cocos2D
                     "Can not compute the size of the font because the character set is empty."));
             }
 
-            for (int i = 0; i < stringLen - 1; ++i)
+            for (int i = 0; i < stringLen; ++i)
             {
                 if (m_sString[i] == '\n')
                 {
@@ -830,7 +830,7 @@ namespace Cocos2D
                         if (Char.IsWhiteSpace(in_string[pos]))
                             break;
 
-                        if (!IsLetter(in_string[pos]) || !IsLetter(in_string[pos - 1]) &&
+                        if ((!IsLetter(in_string[pos]) || !IsLetter(in_string[pos - 1])) &&
                             CanNewLineBefore(in_string[pos]) && CanNewLineAfter(in_string[pos - 1]))
                             break;
 
