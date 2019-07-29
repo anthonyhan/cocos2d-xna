@@ -25,6 +25,26 @@ namespace Cocos2D
         protected CCSprite m_pReusedChar;
         protected bool m_bLabelDirty;
 
+        private bool richTextEnabled = false;
+        protected List<RichTextSegmentColor> richTextSegmentColors;
+
+        protected class RichTextSegmentColor
+        {
+            public RichTextSegmentColor()
+            {
+                BeginIndex = -1;
+                EndIndex = -1;
+                Color = CCColor3B.White;
+            }
+
+            public int BeginIndex;
+            public int EndIndex;
+            public  CCColor3B Color;
+        }
+
+        protected List<RichTextSegmentColor> SegmentColors = new List<RichTextSegmentColor>();
+
+
         public override CCPoint AnchorPoint
         {
             get { return base.AnchorPoint; }
@@ -259,6 +279,15 @@ namespace Cocos2D
         {
             get { return false; }
             set { m_bCascadeOpacityEnabled = value; }
+        }
+
+        public bool RichTextEnabled
+        {
+            get => richTextEnabled; set
+            {
+                richTextEnabled = value;
+                m_bLabelDirty = true;
+            }
         }
 
         public virtual void UpdateDisplayedColor(CCColor3B parentColor)
@@ -638,6 +667,13 @@ namespace Cocos2D
                 return;
             }
 
+            //parsing rich text
+            if(RichTextEnabled)
+            {
+                string parsed_str = ParseRichTextLabels(m_sString, richTextSegmentColors);
+                SetString(parsed_str, false);
+            }
+
             // Step 1: Make multiline
             if (m_tDimensions.Width > 0)
             {
@@ -741,6 +777,25 @@ namespace Cocos2D
                         characterSprite.PositionY += yOffset;
                 }
             }
+
+            //update richtext 
+            if(RichTextEnabled && m_sString.Length>0)
+            {
+                //color
+                int strLength = m_sString.Length;
+                for (int i = 0; i < strLength; i++)
+                {
+                    CCSprite charSprite = (CCSprite)GetChildByTag(i);
+                    if (charSprite != null)
+                    {
+                        foreach(var segmentColor in SegmentColors)
+                        {
+                            if (i >= segmentColor.BeginIndex && i < segmentColor.EndIndex)
+                                charSprite.UpdateDisplayedColor(segmentColor.Color);
+                        }
+                    }
+                }
+            }
         }
 
         private float GetLetterPosXLeft(CCSprite sp)
@@ -840,14 +895,28 @@ namespace Cocos2D
 
                     if (m_bLineBreakWithoutSpaces)
                     {
+                        bool trimed = false;
                         while (Char.IsWhiteSpace(out_string[out_string.Length - 1]))
+                        {
                             out_string.Remove(out_string.Length - 1, 1);
+                            trimed = true;
+                        }
 
                         while (pos < in_string.Length && Char.IsWhiteSpace(in_string[pos]))
+                        {
                             pos++;
+                            trimed = true;
+                        }
+
+                        if (richTextEnabled && trimed)
+                            UpdateRichTextSegmentIndices(pos, out_string.Length - pos);
                     }
 
-                    out_string.AppendLine();
+                    out_string.Append('\n');
+
+                    //update richtext indices
+                    if (richTextEnabled)
+                        UpdateRichTextSegmentIndices(out_string.Length, 1);
 
                     linewidth = 0.0f;
                     numchars = 0;
@@ -861,8 +930,16 @@ namespace Cocos2D
 
                         if (m_bLineBreakWithoutSpaces)
                         {
+                            bool trimed = true;
+
                             while (pos < in_string.Length && Char.IsWhiteSpace(in_string[pos]))
+                            {
                                 pos++;
+                                trimed = true;
+                            }
+
+                            if (richTextEnabled && trimed)
+                                UpdateRichTextSegmentIndices(pos, out_string.Length - pos);
                         }
 
                         linewidth = 0f;
@@ -881,6 +958,7 @@ namespace Cocos2D
 
             return out_string.ToString();
         }
+
 
         private static readonly ushort[] s_notatstart =
 {
@@ -960,6 +1038,97 @@ namespace Cocos2D
         public int GetTextHeight()
         {
             return m_pConfiguration != null ? m_pConfiguration.m_nCommonHeight * GetLineNumber() : 0;
+        }
+
+        protected string ParseRichTextLabels(string text, List<RichTextSegmentColor> segmentColors)
+        {
+            StringBuilder parsed_str = new StringBuilder(text.Length);
+
+            while (text.Length > 0)
+            {
+                if (text.IndexOf("[color:") >= 0)
+                {
+                    // Parsing Color
+                    int idx = text.IndexOf("[color:");
+                    if (idx > 0)
+                    {
+                        parsed_str.Append(text.Substring(0, idx));
+                        text = text.Remove(0, idx);
+                    }
+
+                    text = text.Remove(0, 7);
+                    RichTextSegmentColor segmentColor = new RichTextSegmentColor();
+
+                    idx = text.IndexOf(']');
+                    if (idx >= 0)
+                    {
+                        //color value
+                        string color_str = text.Substring(0, idx);
+                        if(!string.IsNullOrWhiteSpace(color_str))
+                        {
+                            uint color = Convert.ToUInt32(color_str, 16);
+                            byte r = (byte)((color & 0x00FF0000) >> 16);
+                            byte g = (byte)((color & 0x0000FF00) >> 8);
+                            byte b = (byte)((color & 0x000000FF));
+                            segmentColor.Color = new CCColor3B(r, g, b);
+                        }
+                        else
+                        {
+                            throw new FormatException("a color value must be set");
+                        }
+                    }
+                    else
+                    {
+                        throw new FormatException("incorrect color tag");
+                    }
+
+                    text = text.Remove(0, idx + 1); //remove until ']' 
+
+                    //color text start
+                    segmentColor.BeginIndex = parsed_str.Length;
+
+                    idx = text.IndexOf("[/color]");
+                    if (idx >= 0)
+                    {
+                        //color text end
+                        segmentColor.EndIndex = parsed_str.Length + idx;
+
+                        parsed_str.Append(text.Substring(0, idx));
+                        text = text.Remove(0, idx);
+                    }
+                    else
+                    {
+                        throw new FormatException("color closing tag is missing");
+                    }
+
+                    text = text.Remove(0, 8);
+
+                    SegmentColors.Add(segmentColor);
+
+                }
+                else
+                {
+                    parsed_str.Append(text);
+                    text = "";
+                }
+            }
+
+
+            return parsed_str.ToString();
+        }
+
+        private void UpdateRichTextSegmentIndices(int index, int count)
+        {
+            //color
+            for (int i = 0; i < SegmentColors.Count; i++)
+            {
+                var segmentColor = SegmentColors[i];
+                if (segmentColor.BeginIndex >= index)
+                {
+                    segmentColor.BeginIndex += count;
+                    segmentColor.EndIndex += count;
+                }
+            }
         }
     }
 }
