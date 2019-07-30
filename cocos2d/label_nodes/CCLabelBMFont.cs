@@ -26,7 +26,7 @@ namespace Cocos2D
         protected bool m_bLabelDirty;
 
         private bool richTextEnabled = false;
-        protected List<RichTextSegmentColor> richTextSegmentColors;
+        protected List<RichTextSegmentColor> richTextSegmentColors = new List<RichTextSegmentColor>();
 
         protected class RichTextSegmentColor
         {
@@ -41,9 +41,6 @@ namespace Cocos2D
             public int EndIndex;
             public  CCColor3B Color;
         }
-
-        protected List<RichTextSegmentColor> SegmentColors = new List<RichTextSegmentColor>();
-
 
         public override CCPoint AnchorPoint
         {
@@ -549,6 +546,7 @@ namespace Cocos2D
                 {
                     // Reusing previous Sprite
                     fontChar.Visible = true;
+                    fontChar.UpdateDisplayedColor(m_tDisplayedColor);
                 }
                 else
                 {
@@ -789,7 +787,7 @@ namespace Cocos2D
                     CCSprite charSprite = (CCSprite)GetChildByTag(i);
                     if (charSprite != null)
                     {
-                        foreach(var segmentColor in SegmentColors)
+                        foreach(var segmentColor in richTextSegmentColors)
                         {
                             if (i >= segmentColor.BeginIndex && i < segmentColor.EndIndex)
                                 charSprite.UpdateDisplayedColor(segmentColor.Color);
@@ -1104,7 +1102,7 @@ namespace Cocos2D
 
                     text = text.Remove(0, 8);
 
-                    SegmentColors.Add(segmentColor);
+                    richTextSegmentColors.Add(segmentColor);
 
                 }
                 else
@@ -1121,9 +1119,9 @@ namespace Cocos2D
         private void UpdateRichTextSegmentIndices(int index, int count)
         {
             //color
-            for (int i = 0; i < SegmentColors.Count; i++)
+            for (int i = 0; i < richTextSegmentColors.Count; i++)
             {
-                var segmentColor = SegmentColors[i];
+                var segmentColor = richTextSegmentColors[i];
                 if (segmentColor.BeginIndex >= index)
                 {
                     segmentColor.BeginIndex += count;
