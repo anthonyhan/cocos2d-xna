@@ -670,6 +670,7 @@ namespace Cocos2D
             //parsing rich text
             if(RichTextEnabled)
             {
+                richTextSegmentColors.Clear();
                 string parsed_str = ParseRichTextLabels(m_sString, richTextSegmentColors);
                 SetString(parsed_str, false);
             }
@@ -1046,10 +1047,10 @@ namespace Cocos2D
 
             while (text.Length > 0)
             {
-                if (text.IndexOf("[color:") >= 0)
+                if (text.IndexOf("<color:") >= 0)
                 {
                     // Parsing Color
-                    int idx = text.IndexOf("[color:");
+                    int idx = text.IndexOf("<color:");
                     if (idx > 0)
                     {
                         parsed_str.Append(text.Substring(0, idx));
@@ -1059,7 +1060,7 @@ namespace Cocos2D
                     text = text.Remove(0, 7);
                     RichTextSegmentColor segmentColor = new RichTextSegmentColor();
 
-                    idx = text.IndexOf(']');
+                    idx = text.IndexOf('>');
                     if (idx >= 0)
                     {
                         //color value
@@ -1087,7 +1088,7 @@ namespace Cocos2D
                     //color text start
                     segmentColor.BeginIndex = parsed_str.Length;
 
-                    idx = text.IndexOf("[/color]");
+                    idx = text.IndexOf("</color>");
                     if (idx >= 0)
                     {
                         //color text end
