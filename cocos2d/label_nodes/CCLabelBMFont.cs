@@ -71,7 +71,7 @@ namespace Cocos2D
             set
             {
                 base.ScaleX = value;
-                UpdateLabel();
+                UpdateLabelInternal();
             }
         }
 
@@ -652,11 +652,11 @@ namespace Cocos2D
 
             if (needUpdateLabel)
             {
-                UpdateLabel();
+                UpdateLabelInternal();
             }
         }
 
-        protected void UpdateLabel()
+        protected void UpdateLabelInternal()
         {
             SetString(m_sInitialString, false);
 
@@ -838,7 +838,7 @@ namespace Cocos2D
         {
             if (m_bLabelDirty)
             {
-                UpdateLabel();
+                UpdateLabelInternal();
                 m_bLabelDirty = false;
             }
 
@@ -1129,5 +1129,15 @@ namespace Cocos2D
                 }
             }
         }
+
+        public void UpdateLabel()
+        {
+            if(m_bLabelDirty)
+            {
+                UpdateLabelInternal();
+                m_bLabelDirty = false;
+            }
+        }
+
     }
 }
